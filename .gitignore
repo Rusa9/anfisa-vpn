@@ -1,0 +1,32 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Godot local/editor state
+.godot/
+*.import
+
+# Runtime / generated app state
+runtime/
+tmp/
+clash.db
+current-config.json
+
+# Generated data snapshots and caches
+data/raw/
+data/results/
+data/user_favorites.json
+data/user_blacklist.json
+
+# Local launch helpers state
+*.pid
+*.bak
