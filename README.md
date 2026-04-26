@@ -1,47 +1,84 @@
 # Anfisa VPN
 
-Windows desktop prototype for finding, filtering, and opening public proxy configs in Hiddify.
+`Anfisa VPN` — это desktop-приложение для Windows, которое помогает находить, фильтровать и открывать публичные прокси-конфиги в `Hiddify`.
 
-## What it does
+Проект задуман как удобная локальная лаборатория для работы с публичными `VLESS`, `VMess`, `Trojan` и `SS` конфигами: с быстрым отбором, recovery-режимами и честным разделением между свежими и восстановленными результатами.
 
-- downloads public `VLESS`, `VMess`, `Trojan`, and `SS` config pools
-- runs a fast prefilter before a heavier `HiddifyCli`-based runtime check
-- separates results into:
-  - `Fresh`
-  - `History`
-  - `Recommended`
-- supports opening configs directly in Hiddify with Anfisa-branded naming
-- provides `Saved` and `Blocked` local lists
+## Что умеет приложение
 
-## Current focus
+- загружает публичные прокси-конфиги из внешних источников;
+- делает быстрый предварительный отбор (`quick filter`);
+- запускает более строгую runtime-проверку через `HiddifyCli`;
+- разделяет результаты на:
+  - `Fresh` — найдено и подтверждено в текущем запуске;
+  - `History` — восстановлено из доверенных локальных источников или истории;
+  - `Recommended` — подходит для показа в основном списке;
+- позволяет:
+  - открыть конфиг сразу в `Hiddify`;
+  - сохранить хороший конфиг;
+  - заблокировать мусорный конфиг;
+  - запускать обычный тест и recovery-режим.
 
-The main unfinished area is `Smart Test` stability and runtime speed. The UI and Hiddify import flow are already much closer to product quality than the checker itself.
+## Текущее состояние проекта
 
-## Project structure
+Сильные стороны:
+- уже есть удобный UI;
+- работает импорт в `Hiddify` с красивым названием профиля;
+- есть локальные списки `Saved` и `Blocked`;
+- есть fallback-логика, если свежий live-пул не дал результата.
 
-- `project.godot` — Godot project entry
-- `scenes/` — Godot scenes
-- `scripts/` — UI and app logic
-- `tools/` — Python pipeline and Hiddify helpers
-- `assets/` — local assets and branding
-- `webui/` — bundled web assets used by the local workflow
+Что ещё считается незавершённым:
+- стабильность и скорость `Smart Test`;
+- качество live-проверки публичных прокси;
+- добивка recovery-режима до действительно быстрого и предсказуемого поведения.
 
-## Run locally
+Проще говоря: интерфейс уже близок к продукту, но главное ядро — интеллектуальный тестер прокси — всё ещё дорабатывается.
 
-Use either:
+## Как устроен проект
+
+- `project.godot` — точка входа проекта Godot
+- `scenes/` — сцены интерфейса
+- `scripts/` — логика UI и приложения
+- `tools/` — Python-скрипты пайплайна и интеграции с `Hiddify`
+- `assets/` — брендовые и графические ассеты
+- `webui/` — bundled web-ассеты локального стека
+- `data/` — локальные данные, результаты, кэши и служебные JSON
+
+## Как запустить локально
+
+Варианты запуска:
 
 - `RUN_ANFISA_VPN.cmd`
 - `run_anfisa_vpn.ps1`
 
-Or open `project.godot` in Godot and run it from the editor.
+или открыть `project.godot` в Godot и запустить проект из редактора.
 
-## Notes
+## Что не коммитится в репозиторий
 
-- This repo intentionally does **not** commit generated runtime results, raw downloaded proxy pools, or local user state.
-- The current implementation is optimized around honest reporting and recovery-first behavior rather than pretending weak public pools are reliable.
+Репозиторий специально не хранит:
 
-## Source inspiration
+- сырые скачанные proxy-пулы;
+- runtime-результаты проверок;
+- локальные кэши;
+- пользовательские локальные state-файлы;
+- временные файлы и служебный мусор.
 
-Primary upstream source that inspired the proxy aggregation side:
+Это сделано специально, чтобы репозиторий оставался чистым и переносимым.
+
+## Основная идея проекта
+
+`Anfisa VPN` не пытается притворяться “волшебной кнопкой”, которая гарантированно найдёт идеальный публичный прокси.
+
+Цель проекта другая:
+
+- честно показывать, что найдено прямо сейчас;
+- уметь быстро восстанавливаться через trusted seed / history fallback;
+- помогать пользователю добраться до реально usable конфигов быстрее и удобнее, чем через ручной перебор `.txt`-подписок.
+
+## Источники вдохновения
+
+Главный upstream-репозиторий, с которого выросла идея сборки конфигов:
 
 - [kort0881/vpn-vless-configs-russia](https://github.com/kort0881/vpn-vless-configs-russia)
+
+Дополнительные checked / fallback-источники тоже постепенно добавляются и переоцениваются по мере развития `Smart Test`.
