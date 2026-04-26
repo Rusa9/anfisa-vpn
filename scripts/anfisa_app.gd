@@ -67,13 +67,13 @@ const TEXT := {
 		"col_protocol": "Protocol", "col_latency_q": "Quick", "col_latency_r": "Latency",
 		"col_score": "Score",
 		"working_badge": "● WORKING",
-		"fresh_badge": "FRESH", "history_badge": "HISTORY",
+		"fresh_badge": "FRESH", "history_badge": "HISTORY", "seed_badge": "SEED", "unconfirmed_badge": "UNCONF",
 		"run_btn": "▶  Run Smart Test", "quick_btn": "⚡  Quick Recovery", "stop_btn": "■  Stop",
 		"real_limit": "Real Check Limit",
 		"smart_test_title": "Smart Test Control",
 		"stage_idle": "Ready to run", "stage_running": "Pipeline running...", "stage_done": "Pipeline finished",
 		"live_stats_title": "Live Stats",
-		"stat_verified": "Checked", "stat_working": "Fresh", "stat_success": "History",
+		"stat_verified": "Checked", "stat_working": "Fresh", "stat_success": "Visible",
 		"source_pool_title": "Source Pool", "snapshot_title": "Last Snapshot",
 		"country_focus": "Country Focus", "country_focus_hint": "Netherlands, DE, FR...",
 		"exclude_russia": "Exclude Russia",
@@ -101,13 +101,13 @@ const TEXT := {
 		"col_protocol": "Протокол", "col_latency_q": "Быстро", "col_latency_r": "Задержка",
 		"col_score": "Балл",
 		"working_badge": "● РАБОТАЕТ",
-		"fresh_badge": "СВЕЖИЕ", "history_badge": "ИСТОРИЯ",
+		"fresh_badge": "СВЕЖИЕ", "history_badge": "ИСТОРИЯ", "seed_badge": "SEED", "unconfirmed_badge": "UNCONF",
 		"run_btn": "▶  Запустить Тест", "quick_btn": "⚡  Быстрое Восстановление", "stop_btn": "■  Стоп",
 		"real_limit": "Лимит Проверок",
 		"smart_test_title": "Управление Тестом",
 		"stage_idle": "Готово к запуску", "stage_running": "Пайплайн запущен...", "stage_done": "Пайплайн завершён",
 		"live_stats_title": "Статистика",
-		"stat_verified": "Проверено", "stat_working": "Свежие", "stat_success": "История",
+		"stat_verified": "Проверено", "stat_working": "Свежие", "stat_success": "Visible",
 		"source_pool_title": "Пул Источников", "snapshot_title": "Последний Прогон",
 		"country_focus": "Фокус по Странам", "country_focus_hint": "Netherlands, DE, FR...",
 		"exclude_russia": "Исключить Россию",
@@ -1243,12 +1243,16 @@ func _load_latest_results() -> void:
 
 func _refresh_stats() -> void:
 	var total   := int(_stats.get("checked_total", _stats.get("real_checked", _stats.get("parsed_candidates", 0))))
-	var fresh := int(_stats.get("fresh_recommended_total", _fresh_results.size()))
+	var fresh := int(_stats.get("fresh_live_total", _stats.get("fresh_recommended_total", _fresh_results.size())))
 	var retained := int(_stats.get("retained_total", _retained_results.size()))
+	var seed_confirmed := int(_stats.get("seed_confirmed_total", 0))
+	var history_total := int(_stats.get("history_total", retained))
+	var unconfirmed_total := int(_stats.get("unconfirmed_seed_total", 0))
 	var visible := int(_stats.get("recommended_visible_total", _stats.get("visible_total", _all_results.size())))
+	var runtime_seconds := int(_stats.get("runtime_seconds", 0))
 	_stat_verified_label.text = str(total)
 	_stat_working_label.text  = str(fresh)
-	_stat_success_label.text  = str(retained)
+	_stat_success_label.text  = str(visible)
 	var parsed_counts = _stats.get("parsed_candidates", null)
 	if parsed_counts is Dictionary:
 		var lines := PackedStringArray()
@@ -1259,7 +1263,7 @@ func _refresh_stats() -> void:
 		_source_pool_label.text = "—"
 	var ts := str(_meta.get("started_at", "—"))
 	var slow_count := int(_stats.get("slow_hidden_total", _stats.get("fresh_slow_total", 0)))
-	_snapshot_label.text = "Run: %s\nFresh: %d\nHistory: %d\nVisible: %d\nSlow hidden: %d" % [ts, fresh, retained, visible, slow_count]
+	_snapshot_label.text = "Run: %s\nFresh: %d\nSeed: %d\nHistory: %d\nUnconfirmed: %d\nVisible: %d\nRuntime: %ds\nSlow hidden: %d" % [ts, fresh, seed_confirmed, history_total, unconfirmed_total, visible, runtime_seconds, slow_count]
 
 
 # =====================================================================
@@ -1355,6 +1359,10 @@ func _make_result_row(result: Dictionary, index: int) -> Control:
 	var score      = result.get("score", null)
 	var tag        := str(result.get("tag", ""))
 	var source_kind := str(result.get("source_kind", "fresh"))
+	var verification_tier_default := "live_confirmed"
+	if source_kind != "fresh":
+		verification_tier_default = "history_retained"
+	var verification_tier := str(result.get("verification_tier", verification_tier_default))
 	var quality_tier := str(result.get("quality_tier", "unknown"))
 
 	var host := ""
@@ -1366,7 +1374,7 @@ func _make_result_row(result: Dictionary, index: int) -> Control:
 	else:
 		host = endpoint
 
-	_row_cell(row, _make_working_badge(source_kind, quality_tier), 108)
+	_row_cell(row, _make_working_badge(source_kind, verification_tier, quality_tier), 124)
 	_row_cell(row, _make_lbl(host, C_TXT, 13), 145)
 	_row_cell(row, _make_lbl(port_str, C_DIM, 13), 52)
 	_row_cell(row, _make_lbl(_get_flag(exit_country) + " " + exit_country, C_TXT, 13), 128)
@@ -1433,10 +1441,25 @@ func _make_lbl(text: String, color: Color, size: int) -> Label:
 	return lbl
 
 
-func _make_working_badge(source_kind: String = "fresh", quality_tier: String = "unknown") -> Control:
+func _make_working_badge(source_kind: String = "fresh", verification_tier: String = "live_confirmed", quality_tier: String = "unknown") -> Control:
 	var c := CenterContainer.new()
 	var s := StyleBoxFlat.new()
-	var badge_color := C_GREEN if source_kind == "fresh" else C_ACCENT2
+	var badge_color := C_GREEN
+	var source_text := _t("fresh_badge")
+	match verification_tier:
+		"seed_confirmed":
+			badge_color = C_BLUE
+			source_text = _t("seed_badge")
+		"history_retained":
+			badge_color = C_ACCENT2
+			source_text = _t("history_badge")
+		"seed_unconfirmed":
+			badge_color = C_ORANGE
+			source_text = _t("unconfirmed_badge")
+		_:
+			if source_kind != "fresh":
+				badge_color = C_ACCENT2
+				source_text = _t("history_badge")
 	s.bg_color = Color(badge_color.r, badge_color.g, badge_color.b, 0.12)
 	s.border_color = Color(badge_color.r, badge_color.g, badge_color.b, 0.35)
 	s.border_width_left = 1
@@ -1454,7 +1477,6 @@ func _make_working_badge(source_kind: String = "fresh", quality_tier: String = "
 	var inner := PanelContainer.new()
 	inner.add_theme_stylebox_override("panel", s)
 	var lbl := Label.new()
-	var source_text := _t("fresh_badge") if source_kind == "fresh" else _t("history_badge")
 	lbl.text = "%s • %s" % [source_text, quality_tier.to_upper()]
 	lbl.add_theme_font_size_override("font_size", 10)
 	lbl.add_theme_color_override("font_color", badge_color)
@@ -1724,13 +1746,14 @@ func _poll_pipeline_state() -> void:
 	var stage := str(state.get("stage", ""))
 	var message := str(state.get("message", ""))
 	var checked_total := int(state.get("checked_total", 0))
-	var fresh_total := int(state.get("fresh_recommended_total", state.get("fresh_working_total", state.get("fresh_passing_total", 0))))
+	var fresh_total := int(state.get("fresh_live_total", state.get("fresh_recommended_total", state.get("fresh_working_total", state.get("fresh_passing_total", 0)))))
 	var retained_total := int(state.get("retained_total", 0))
+	var visible_total := int(state.get("visible_total", state.get("recommended_visible_total", retained_total + fresh_total)))
 	var progress_value := float(state.get("progress", -1))
 	_stage_label.text = message if message != "" else stage
 	_stat_verified_label.text = str(checked_total)
 	_stat_working_label.text = str(fresh_total)
-	_stat_success_label.text = str(retained_total)
+	_stat_success_label.text = str(visible_total)
 	if status == "completed":
 		_pipeline_running = false
 		_pipeline_pid = -1
@@ -1740,11 +1763,11 @@ func _poll_pipeline_state() -> void:
 		_run_button.text = _t("run_btn")
 		_stop_button.visible = false
 		_progress_bar.value = 100
-		if fresh_total == 0 and retained_total == 0:
+		if fresh_total == 0 and visible_total == 0:
 			_footer_status.text = _t("placeholder_none")
 			_footer_status.add_theme_color_override("font_color", C_ORANGE)
-		elif fresh_total == 0 and retained_total > 0:
-			_footer_status.text = "Fresh: 0, recovered from history"
+		elif fresh_total == 0 and visible_total > 0:
+			_footer_status.text = "Fresh: 0, showing retained/seed mix"
 			_footer_status.add_theme_color_override("font_color", C_ORANGE)
 		else:
 			_footer_status.text = _t("all_ok")
