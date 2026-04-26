@@ -30,6 +30,15 @@ PIPELINE_STATE_PATH = PROJECT_ROOT / "data" / "results" / "pipeline_state.json"
 PIPELINE_STOP_PATH = PROJECT_ROOT / "data" / "results" / "pipeline_stop.flag"
 DEBUG_LOG_PATH = PROJECT_ROOT / "data" / "results" / "debug_real_check.log"
 
+MINIMUM_USEFUL_TOTAL = 5
+SOFT_TARGET_TOTAL = 12
+EXPANSION_TARGET_TOTAL = 30
+SMART_RUNTIME_BUDGET_SECONDS = 300
+QUICK_RUNTIME_BUDGET_SECONDS = 120
+REMAINING_SECONDS_FOR_NOISY_STAGE = 45
+REMAINING_SECONDS_FOR_SOFT_EXPANSION = 75
+LIVE_STAGE_STOP_TARGET = 3
+
 def _debug_log(msg: str) -> None:
     try:
         with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as fh:
@@ -57,11 +66,25 @@ LEGACY_SEED_FILES = [
     LEGACY_SEED_DIR / "vless_checked.txt",
     LEGACY_SEED_DIR / "vmess_checked.txt",
 ]
-TRUSTED_SEED_FILES = LEGACY_SEED_FILES[:4]
-CHECKED_SEED_FILES = LEGACY_SEED_FILES[4:]
+TRUSTED_LOCAL_SEED_FILES = [
+    LEGACY_SEED_DIR / "BEST_FOR_HIDDIFY_ranked.txt",
+    LEGACY_SEED_DIR / "BEST_FOR_HIDDIFY.txt",
+    LEGACY_SEED_DIR / "trojan_checked.txt",
+    LEGACY_SEED_DIR / "vless_checked.txt",
+    LEGACY_SEED_DIR / "ss_checked.txt",
+    LEGACY_SEED_DIR / "vmess_checked.txt",
+    LEGACY_SEED_DIR / "WORKING_UNIQUE_NOW.txt",
+    LEGACY_SEED_DIR / "WORKING_NOW_TROJAN.txt",
+]
+LEGACY_TRUST_FILES = [
+    LEGACY_SEED_DIR / "REAL_WORKING.txt",
+    LEGACY_SEED_DIR / "REAL_WORKING_UNIQUE_BY_IP.txt",
+]
 REMOTE_CHECKED_SEED_URLS = [
     "https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_VLESS_RUS_mobile.txt",
     "https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_SS+All_RUS.txt",
+    "https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/Vless-Reality-White-Lists-Rus-Mobile.txt",
+    "https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/Vless-Reality-White-Lists-Rus-Mobile-2.txt",
 ]
 SOURCE_URLS = {
     "vless": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/clean/vless.txt",
@@ -69,28 +92,51 @@ SOURCE_URLS = {
     "vmess": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/clean/vmess.txt",
     "ss": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/clean/ss.txt",
 }
+RU_SNI_SOURCE_URLS = {
+    "vless_ru_sni": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/ru-sni/vless_ru.txt",
+    "trojan_ru_sni": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/ru-sni/trojan_ru.txt",
+    "vmess_ru_sni": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/ru-sni/vmess_ru.txt",
+    "ss_ru_sni": "https://raw.githubusercontent.com/kort0881/vpn-vless-configs-russia/main/githubmirror/ru-sni/ss_ru.txt",
+}
+NOISY_PROTOCOL_URLS = {
+    "vless_epodonios": "https://raw.githubusercontent.com/Epodonios/v2ray-configs/main/Splitted-By-Protocol/vless.txt",
+    "trojan_epodonios": "https://raw.githubusercontent.com/Epodonios/v2ray-configs/main/Splitted-By-Protocol/trojan.txt",
+    "vmess_epodonios": "https://raw.githubusercontent.com/Epodonios/v2ray-configs/main/Splitted-By-Protocol/vmess.txt",
+    "ss_epodonios": "https://raw.githubusercontent.com/Epodonios/v2ray-configs/main/Splitted-By-Protocol/ss.txt",
+}
+NOISY_MIXED_URLS = [
+    "https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/all_sub.txt",
+    "https://raw.githubusercontent.com/ippscan/v2rayNEW-configs/main/Sub1.txt",
+    "https://raw.githubusercontent.com/ippscan/v2rayNEW-configs/main/Sub2.txt",
+]
 PROTOCOL_PRIORITY = {"trojan": 24, "vless": 22, "vmess": 12, "ss": 8}
 TLS_LIKE_PORTS = {443, 8443, 2053, 2083, 2087, 2096}
 LOW_VALUE_PORTS = {80, 8080, 8880}
-PROTOCOL_TIMING: dict[tuple[str, str, str], dict] = {
-    ("trojan", "ws", "tls"):     {"startup_wait": 3.5, "timeout": 9},
-    ("trojan", "tcp", "tls"):    {"startup_wait": 3.0, "timeout": 8},
-    ("trojan", "grpc", "tls"):   {"startup_wait": 3.5, "timeout": 9},
-    ("vless", "tcp", "reality"): {"startup_wait": 5.5, "timeout": 12},
-    ("vless", "ws", "reality"):  {"startup_wait": 5.5, "timeout": 12},
-    ("vless", "grpc", "reality"):{"startup_wait": 6.0, "timeout": 13},
-    ("vless", "tcp", "tls"):     {"startup_wait": 3.5, "timeout": 9},
-    ("vless", "ws", "tls"):      {"startup_wait": 3.5, "timeout": 9},
-    ("vless", "grpc", "tls"):    {"startup_wait": 4.0, "timeout": 10},
-    ("vmess", "ws", "tls"):      {"startup_wait": 4.5, "timeout": 11},
-    ("vmess", "tcp", "tls"):     {"startup_wait": 4.0, "timeout": 10},
-    ("vmess", "tcp", ""):        {"startup_wait": 4.0, "timeout": 10},
-    ("vmess", "ws", ""):         {"startup_wait": 4.5, "timeout": 11},
-    ("vmess", "grpc", "tls"):    {"startup_wait": 4.5, "timeout": 11},
-    ("vmess", "http", ""):       {"startup_wait": 4.0, "timeout": 10},
+SOURCE_LANE_WEIGHTS = {
+    "trusted_checked": 90,
+    "trusted_local_seed": 80,
+    "live_primary": 70,
+    "noisy_expansion": 45,
 }
-PROTOCOL_TIMING_DEFAULT = {"startup_wait": 4.0, "timeout": 10}
-RECOMMENDED_MAX_MS = 300
+PROTOCOL_TIMING: dict[tuple[str, str, str], dict] = {
+    ("trojan", "ws", "tls"):     {"startup_wait": 3.8, "timeout": 7},
+    ("trojan", "tcp", "tls"):    {"startup_wait": 3.5, "timeout": 7},
+    ("trojan", "grpc", "tls"):   {"startup_wait": 4.0, "timeout": 7},
+    ("vless", "tcp", "reality"): {"startup_wait": 4.5, "timeout": 8},
+    ("vless", "ws", "reality"):  {"startup_wait": 4.6, "timeout": 8},
+    ("vless", "grpc", "reality"):{"startup_wait": 4.8, "timeout": 8},
+    ("vless", "tcp", "tls"):     {"startup_wait": 3.8, "timeout": 7},
+    ("vless", "ws", "tls"):      {"startup_wait": 4.0, "timeout": 7},
+    ("vless", "grpc", "tls"):    {"startup_wait": 4.2, "timeout": 7},
+    ("vmess", "ws", "tls"):      {"startup_wait": 4.0, "timeout": 8},
+    ("vmess", "tcp", "tls"):     {"startup_wait": 3.8, "timeout": 8},
+    ("vmess", "tcp", ""):        {"startup_wait": 3.6, "timeout": 7},
+    ("vmess", "ws", ""):         {"startup_wait": 3.8, "timeout": 8},
+    ("vmess", "grpc", "tls"):    {"startup_wait": 4.1, "timeout": 8},
+    ("vmess", "http", ""):       {"startup_wait": 3.8, "timeout": 7},
+}
+PROTOCOL_TIMING_DEFAULT = {"startup_wait": 4.0, "timeout": 7}
+RECOMMENDED_MAX_MS = 700
 COUNTRY_KEYWORDS = {
     "netherlands": "Netherlands",
     "holland": "Netherlands",
@@ -183,6 +229,16 @@ class Candidate:
     quick_reachable: bool = False
     quick_latency_ms: Optional[int] = None
     source_lane: str = "live"
+    source_name: str = ""
+
+
+@dataclass(frozen=True)
+class RemoteSourceSpec:
+    name: str
+    url: str
+    protocol_hint: Optional[str]
+    source_lane: str
+    max_candidates: int
 
 
 def ensure_dirs() -> None:
@@ -242,7 +298,16 @@ def guess_region(tag: str) -> str:
             return value
     upper = decoded.upper()
     for code, value in COUNTRY_CODES.items():
-        if f"{code}-" in upper or f" {code} " in upper or f"_{code}_" in upper or upper.startswith(code + "-"):
+        if (
+            f"{code}-" in upper
+            or f" {code} " in upper
+            or f"_{code}_" in upper
+            or upper.startswith(code + "-")
+            or upper.startswith(code + " ")
+            or upper.startswith("[" + code + "]")
+            or upper.startswith(code + "|")
+            or f"({code})" in upper
+        ):
             return value
     return "Unknown"
 
@@ -352,115 +417,204 @@ def parse_basic(line: str, protocol: str) -> Optional[Candidate]:
     return None
 
 
-def download_sources() -> dict:
-    downloaded = {}
-    proxy_handler = None
+def infer_protocol(line: str) -> str:
+    if line.startswith("trojan://"):
+        return "trojan"
+    if line.startswith("vless://"):
+        return "vless"
+    if line.startswith("vmess://"):
+        return "vmess"
+    if line.startswith("ss://"):
+        return "ss"
+    return ""
+
+
+def build_primary_source_specs() -> list[RemoteSourceSpec]:
+    specs: list[RemoteSourceSpec] = []
+    for name, url in SOURCE_URLS.items():
+        specs.append(RemoteSourceSpec(name=name, url=url, protocol_hint=name, source_lane="live_primary", max_candidates=180))
+    for name, url in RU_SNI_SOURCE_URLS.items():
+        protocol_hint = name.split("_", 1)[0]
+        specs.append(RemoteSourceSpec(name=name, url=url, protocol_hint=protocol_hint, source_lane="live_primary", max_candidates=120))
+    return specs
+
+
+def build_trusted_checked_source_specs() -> list[RemoteSourceSpec]:
+    return [
+        RemoteSourceSpec(name="igareck_black_vless_mobile", url=REMOTE_CHECKED_SEED_URLS[0], protocol_hint=None, source_lane="trusted_checked", max_candidates=60),
+        RemoteSourceSpec(name="igareck_black_ss_all", url=REMOTE_CHECKED_SEED_URLS[1], protocol_hint=None, source_lane="trusted_checked", max_candidates=60),
+        RemoteSourceSpec(name="igareck_reality_mobile_1", url=REMOTE_CHECKED_SEED_URLS[2], protocol_hint=None, source_lane="trusted_checked", max_candidates=60),
+        RemoteSourceSpec(name="igareck_reality_mobile_2", url=REMOTE_CHECKED_SEED_URLS[3], protocol_hint=None, source_lane="trusted_checked", max_candidates=60),
+    ]
+
+
+def build_noisy_source_specs() -> list[RemoteSourceSpec]:
+    specs: list[RemoteSourceSpec] = []
+    for name, url in NOISY_PROTOCOL_URLS.items():
+        protocol_hint = name.split("_", 1)[0]
+        specs.append(RemoteSourceSpec(name=name, url=url, protocol_hint=protocol_hint, source_lane="noisy_expansion", max_candidates=40))
+    for index, url in enumerate(NOISY_MIXED_URLS, start=1):
+        specs.append(RemoteSourceSpec(name="noisy_mixed_%d" % index, url=url, protocol_hint=None, source_lane="noisy_expansion", max_candidates=20))
+    return specs
+
+
+def protocol_stat_bucket() -> dict[str, int]:
+    return {"vless": 0, "trojan": 0, "vmess": 0, "ss": 0}
+
+
+def download_source_text(name: str, url: str, timeout: int = 20) -> tuple[str, int]:
+    cache_path = RAW_DIR / ("%s.txt" % name)
     try:
-        from urllib.request import ProxyHandler
-        proxy_handler = ProxyHandler()
-    except Exception:
-        pass
-    for protocol, url in SOURCE_URLS.items():
-        try:
-            request = Request(url, headers={"User-Agent": "AnfisaVPN/0.1"})
-            with urlopen(request, timeout=25) as response:
-                text = response.read().decode("utf-8", errors="ignore")
-            (RAW_DIR / f"{protocol}.txt").write_text(text, encoding="utf-8")
-            downloaded[protocol] = len(text.splitlines())
-        except Exception as exc:
-            cached_path = RAW_DIR / f"{protocol}.txt"
-            if cached_path.exists():
-                cached_lines = len(cached_path.read_text(encoding="utf-8", errors="ignore").splitlines())
-                downloaded[protocol] = cached_lines
-                _debug_log("download %s failed (%s), using cached %d lines" % (protocol, exc, cached_lines))
-            else:
-                downloaded[protocol] = 0
-                _debug_log("download %s failed (%s), no cache available" % (protocol, exc))
-    return downloaded
+        request = Request(url, headers={"User-Agent": "AnfisaVPN/0.3"})
+        with urlopen(request, timeout=timeout) as response:
+            text = response.read().decode("utf-8", errors="ignore")
+        cache_path.write_text(text, encoding="utf-8")
+    except Exception as exc:
+        if not cache_path.exists():
+            _debug_log("download %s failed (%s), no cache available" % (name, exc))
+            return "", 0
+        text = cache_path.read_text(encoding="utf-8", errors="ignore")
+        _debug_log("download %s failed (%s), using cached source" % (name, exc))
+    return text, len([line for line in text.splitlines() if normalize_line(line)])
 
 
-def load_candidates(max_per_protocol: int = 700) -> tuple[list[Candidate], dict]:
-    parsed_counts = {}
-    all_candidates: list[Candidate] = []
-    for protocol in SOURCE_URLS.keys():
-        path = RAW_DIR / f"{protocol}.txt"
-        seen: set[str] = set()
-        count = 0
-        if not path.exists():
-            parsed_counts[protocol] = 0
+def parse_candidates_from_lines(
+    lines: list[str],
+    protocol_hint: Optional[str],
+    max_candidates: int,
+    source_lane: str,
+    source_name: str,
+) -> tuple[list[Candidate], dict[str, int]]:
+    parsed_counts = protocol_stat_bucket()
+    candidates: list[Candidate] = []
+    seen_raw: set[str] = set()
+    for raw in lines:
+        line = normalize_line(raw)
+        if not line or line in seen_raw:
             continue
-        for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-            line = normalize_line(raw)
-            if not line or line in seen:
-                continue
-            seen.add(line)
-            candidate = parse_basic(line, protocol)
-            if candidate is None:
-                continue
-            all_candidates.append(candidate)
-            count += 1
-            if count >= max_per_protocol:
-                break
-        parsed_counts[protocol] = count
-    return all_candidates, parsed_counts
+        protocol = protocol_hint or infer_protocol(line)
+        if protocol == "":
+            continue
+        candidate = parse_basic(line, protocol)
+        if candidate is None:
+            continue
+        candidate.source_lane = source_lane
+        candidate.source_name = source_name
+        seen_raw.add(line)
+        candidates.append(candidate)
+        parsed_counts[protocol] += 1
+        if len(candidates) >= max_candidates:
+            break
+    return candidates, parsed_counts
 
 
-def load_seed_candidates(limit_per_file: int = 30, paths: Optional[list[Path]] = None, source_lane: str = "trusted_seed") -> list[Candidate]:
-    seeds: list[Candidate] = []
-    seen: set[str] = set()
-    for path in paths or LEGACY_SEED_FILES:
+def load_remote_candidates(specs: list[RemoteSourceSpec]) -> tuple[list[Candidate], dict[str, int], dict[str, int]]:
+    all_candidates: list[Candidate] = []
+    downloaded_counts = protocol_stat_bucket()
+    parsed_counts = protocol_stat_bucket()
+    for spec in specs:
+        text, downloaded_lines = download_source_text(spec.name, spec.url, timeout=25)
+        if text == "":
+            continue
+        if spec.protocol_hint is not None:
+            downloaded_counts[spec.protocol_hint] += downloaded_lines
+        lines = text.splitlines()
+        source_candidates, source_parsed = parse_candidates_from_lines(
+            lines,
+            spec.protocol_hint,
+            spec.max_candidates,
+            spec.source_lane,
+            spec.name,
+        )
+        all_candidates.extend(source_candidates)
+        for protocol, count in source_parsed.items():
+            parsed_counts[protocol] += int(count)
+            if spec.protocol_hint is None:
+                downloaded_counts[protocol] += int(count)
+    return dedupe_candidates(all_candidates), downloaded_counts, parsed_counts
+
+
+def load_local_seed_candidates() -> tuple[list[Candidate], dict[str, int]]:
+    candidates: list[Candidate] = []
+    parsed_counts = protocol_stat_bucket()
+    file_limits = {
+        "BEST_FOR_HIDDIFY_ranked.txt": 40,
+        "BEST_FOR_HIDDIFY.txt": 40,
+        "trojan_checked.txt": 25,
+        "vless_checked.txt": 25,
+        "ss_checked.txt": 25,
+        "vmess_checked.txt": 25,
+        "WORKING_UNIQUE_NOW.txt": 12,
+        "WORKING_NOW_TROJAN.txt": 12,
+        "REAL_WORKING.txt": 0,
+        "REAL_WORKING_UNIQUE_BY_IP.txt": 0,
+    }
+    for path in TRUSTED_LOCAL_SEED_FILES + LEGACY_TRUST_FILES:
         if not path.exists():
+            continue
+        if path.stat().st_size <= 0:
+            continue
+        limit = int(file_limits.get(path.name, 20))
+        if limit <= 0:
             continue
         try:
             lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except Exception:
             continue
-        count = 0
-        for raw in lines:
-            line = normalize_line(raw)
-            if not line or line in seen:
-                continue
-            candidate = parse_basic(line, "trojan" if line.startswith("trojan://") else "vless" if line.startswith("vless://") else "vmess" if line.startswith("vmess://") else "ss")
-            if candidate is None:
-                continue
-            candidate.source_lane = source_lane
-            seen.add(line)
-            seeds.append(candidate)
-            count += 1
-            if count >= limit_per_file:
-                break
-    return seeds
+        source_candidates, source_parsed = parse_candidates_from_lines(
+            lines,
+            None,
+            limit,
+            "trusted_local_seed",
+            path.name,
+        )
+        candidates.extend(source_candidates)
+        for protocol, count in source_parsed.items():
+            parsed_counts[protocol] += int(count)
+    return dedupe_candidates(candidates), parsed_counts
 
 
-def load_remote_seed_candidates(urls: list[str], limit_per_url: int = 60, source_lane: str = "checked_seed") -> list[Candidate]:
-    seeds: list[Candidate] = []
-    seen: set[str] = set()
-    for url in urls:
-        try:
-            request = Request(url, headers={"User-Agent": "AnfisaVPN/0.2"})
-            with urlopen(request, timeout=15) as response:
-                text = response.read().decode("utf-8", errors="ignore")
-        except Exception as exc:
-            _debug_log("remote seed failed %s (%s)" % (url, exc))
+def load_history_recheck_candidates(history_items: list[dict], source_lane: str = "verified_history") -> list[Candidate]:
+    candidates: list[Candidate] = []
+    for item in history_items:
+        raw = normalize_line(str(item.get("config", "")))
+        if raw == "":
             continue
-        count = 0
-        for raw in text.splitlines():
-            line = normalize_line(raw)
-            if not line or line in seen:
-                continue
-            proto = "trojan" if line.startswith("trojan://") else "vless" if line.startswith("vless://") else "vmess" if line.startswith("vmess://") else "ss" if line.startswith("ss://") else ""
-            if proto == "":
-                continue
-            candidate = parse_basic(line, proto)
-            if candidate is None:
-                continue
-            candidate.source_lane = source_lane
-            seen.add(line)
-            seeds.append(candidate)
-            count += 1
-            if count >= limit_per_url:
-                break
-    return seeds
+        protocol = infer_protocol(raw)
+        if protocol == "":
+            continue
+        candidate = parse_basic(raw, protocol)
+        if candidate is None:
+            continue
+        candidate.source_lane = source_lane
+        candidate.source_name = "history"
+        quick_ms = item.get("quick_latency_ms", None)
+        try:
+            if quick_ms is not None:
+                candidate.quick_latency_ms = int(quick_ms)
+        except Exception:
+            candidate.quick_latency_ms = None
+        candidate.score = max(candidate.score, int(item.get("score", 0)))
+        if str(item.get("region", "")) not in {"", "Unknown"}:
+            candidate.region = str(item.get("region"))
+        candidates.append(candidate)
+    return dedupe_candidates(candidates)
+
+
+def dedupe_candidates(candidates: list[Candidate]) -> list[Candidate]:
+    deduped: list[Candidate] = []
+    seen_raw: set[str] = set()
+    seen_endpoint: set[str] = set()
+    for candidate in candidates:
+        endpoint = "%s|%s:%s" % (candidate.protocol, candidate.host, candidate.port)
+        if candidate.raw in seen_raw:
+            continue
+        if endpoint in seen_endpoint:
+            continue
+        seen_raw.add(candidate.raw)
+        seen_endpoint.add(endpoint)
+        deduped.append(candidate)
+    return deduped
 
 
 def build_unconfirmed_seed_history(
@@ -470,6 +624,8 @@ def build_unconfirmed_seed_history(
     geo_cache: dict,
 ) -> list[dict]:
     result = list(current_items)
+    if len(result) >= target_min_unique:
+        return annotate_result_countries(result, geo_cache)
     seen_endpoints = {str(item.get("endpoint", "")) for item in result}
     seen_configs = {str(item.get("config", "")) for item in result}
     for candidate in trusted_candidates:
@@ -497,6 +653,8 @@ def build_unconfirmed_seed_history(
             "passed": False,
             "reason": "trusted_seed_unconfirmed",
             "source_kind": "history",
+            "source_lane": "seed_unconfirmed",
+            "verification_tier": "seed_unconfirmed",
             "retained_from_trusted_seed_file": True,
             "retained_without_live_confirmation": True,
         }
@@ -512,6 +670,10 @@ def build_unconfirmed_seed_history(
 
 def score_candidate(candidate: Candidate) -> int:
     score = PROTOCOL_PRIORITY.get(candidate.protocol, 0)
+    if candidate.source_lane == "trusted_checked" and candidate.protocol == "vless" and candidate.security in {"", "none"} and candidate.network == "ws":
+        score += 26
+    if candidate.source_lane == "trusted_checked" and candidate.protocol == "trojan" and candidate.network == "ws":
+        score += 8
     if candidate.security == "reality":
         score += 28
     elif candidate.security == "tls":
@@ -536,6 +698,12 @@ def score_candidate(candidate: Candidate) -> int:
         score += 5
     if candidate.port in LOW_VALUE_PORTS:
         score -= 5
+    if candidate.source_lane == "trusted_checked":
+        score += 12
+    elif candidate.source_lane == "trusted_local_seed":
+        score += 10
+    elif candidate.source_lane == "live_primary":
+        score += 6
 
     lowered = candidate.raw.lower()
     if "@shh_proxy" in lowered or "@ghalagyann" in lowered:
@@ -836,6 +1004,22 @@ def curl_url_ok(proxy_port: int, timeout: int, url: str) -> tuple[bool, Optional
     return ok, total_ms
 
 
+def sample_proxy_latency(proxy_port: int, timeout: int, url: str, attempts: int = 2, pause_sec: float = 0.2) -> tuple[bool, Optional[int]]:
+    samples: list[int] = []
+    ok_any = False
+    for attempt in range(attempts):
+        ok, total_ms = curl_url_ok(proxy_port, timeout, url)
+        if ok:
+            ok_any = True
+            if total_ms is not None:
+                samples.append(int(total_ms))
+        if attempt < attempts - 1:
+            time.sleep(pause_sec)
+    if not ok_any:
+        return False, None
+    return True, min(samples) if samples else None
+
+
 def classify_fail_reason(cloudflare_ok: bool, exit_ip: Optional[str], quick_latency_ms: Optional[int], candidate: Candidate) -> str:
     if exit_ip:
         return "unknown_runtime_fail"
@@ -899,7 +1083,7 @@ def wait_for_port(port: int, timeout: float = 5.0) -> bool:
 def classify_quality(quick_latency_ms: Optional[int], real_latency_ms: Optional[int]) -> str:
     if quick_latency_ms is None and real_latency_ms is None:
         return "unknown"
-    baseline = quick_latency_ms if quick_latency_ms is not None else real_latency_ms
+    baseline = real_latency_ms if real_latency_ms is not None else quick_latency_ms
     if baseline is None:
         return "unknown"
     if baseline <= 150:
@@ -914,10 +1098,10 @@ def classify_quality(quick_latency_ms: Optional[int], real_latency_ms: Optional[
 
 
 def effective_latency_ms(quick_latency_ms: Optional[int], real_latency_ms: Optional[int]) -> Optional[int]:
-    if quick_latency_ms is not None:
-        return int(quick_latency_ms)
     if real_latency_ms is not None:
         return int(real_latency_ms)
+    if quick_latency_ms is not None:
+        return int(quick_latency_ms)
     return None
 
 
@@ -1003,7 +1187,8 @@ def candidate_priority(candidate: Candidate, state: dict) -> tuple:
     ep_state = state.get("endpoints", {}).get(endpoint, {})
     fam_state = state.get("families", {}).get(family_key, {})
     trust = get_entry_trust(ep_state) + get_entry_trust(fam_state)
-    return (-trust, -candidate.score, candidate.quick_latency_ms or 99999)
+    lane_weight = SOURCE_LANE_WEIGHTS.get(candidate.source_lane, 0)
+    return (-lane_weight, -trust, -candidate.score, candidate.quick_latency_ms or 99999)
 
 
 def apply_cooldown(candidates: list[Candidate], state: dict, now_ts: int) -> list[Candidate]:
@@ -1026,6 +1211,58 @@ def apply_cooldown(candidates: list[Candidate], state: dict, now_ts: int) -> lis
         filtered.append(candidate)
     filtered.sort(key=lambda item: candidate_priority(item, state))
     return filtered
+
+
+def summarize_candidates(candidates: list[Candidate]) -> dict[str, int]:
+    counts = protocol_stat_bucket()
+    for candidate in candidates:
+        counts[candidate.protocol] = int(counts.get(candidate.protocol, 0)) + 1
+    return counts
+
+
+def build_protocol_balanced_pool(
+    candidates: list[Candidate],
+    total_limit: int,
+    per_protocol_limit: int,
+    protocol_order: tuple[str, ...] = ("vless", "trojan", "ss", "vmess"),
+) -> list[Candidate]:
+    groups: dict[str, list[Candidate]] = {protocol: [] for protocol in protocol_order}
+    for candidate in candidates:
+        groups.setdefault(candidate.protocol, []).append(candidate)
+    ordered: list[Candidate] = []
+    per_protocol_counts: dict[str, int] = {}
+    index = 0
+    max_len = max((len(items) for items in groups.values()), default=0)
+    while len(ordered) < total_limit and index < max_len:
+        progressed = False
+        for protocol in protocol_order:
+            items = groups.get(protocol, [])
+            if index >= len(items):
+                continue
+            if per_protocol_counts.get(protocol, 0) >= per_protocol_limit:
+                continue
+            ordered.append(items[index])
+            per_protocol_counts[protocol] = int(per_protocol_counts.get(protocol, 0)) + 1
+            progressed = True
+            if len(ordered) >= total_limit:
+                break
+        if not progressed:
+            break
+        index += 1
+    return ordered
+
+
+def keep_release_protocols(candidates: list[Candidate]) -> list[Candidate]:
+    return [candidate for candidate in candidates if candidate.protocol in {"vless", "trojan"}]
+
+
+def runtime_budget_seconds(mode: str) -> int:
+    return QUICK_RUNTIME_BUDGET_SECONDS if mode == "quick_recovery" else SMART_RUNTIME_BUDGET_SECONDS
+
+
+def runtime_remaining_seconds(started_monotonic: float, mode: str) -> int:
+    elapsed = int(time.perf_counter() - started_monotonic)
+    return max(0, runtime_budget_seconds(mode) - elapsed)
 
 
 def update_proxy_state(state: dict, records: list[dict]) -> dict:
@@ -1073,6 +1310,30 @@ def update_proxy_state(state: dict, records: list[dict]) -> dict:
     return state
 
 
+def cleanup_stale_hiddify_cli() -> None:
+    try:
+        subprocess.run(
+            ["taskkill", "/IM", "HiddifyCli.exe", "/F", "/T"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except Exception:
+        pass
+    time.sleep(0.8)
+
+
+def read_tail_text(path: Path, max_chars: int = 600) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+    text = text.strip()
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
 def run_single_real_check(candidate: Candidate, index: int, timeout: int, startup_wait: float, port_start: int) -> dict:
     _debug_log(f"START #{index} lane={candidate.source_lane} {candidate.protocol} {candidate.host}:{candidate.port} quick={candidate.quick_latency_ms}ms")
     outbound = build_hiddify_outbound(candidate)
@@ -1096,40 +1357,31 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
     effective_timeout = max(timeout, int(timing["timeout"]))
     effective_startup_wait = max(startup_wait, float(timing["startup_wait"]))
 
-    config_path = TEMP_DIR / f"candidate_{index}.json"
+    run_dir = TEMP_DIR / f"run_{index}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    for leftover in ("current-config.json", "clash.db", "box.log", "app.log"):
+        try:
+            (run_dir / leftover).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    config_path = run_dir / f"candidate_{index}.json"
     config_path.write_text(json.dumps({"outbounds": [outbound]}, ensure_ascii=False, indent=2), encoding="utf-8")
     proxy_port = port_start + index
     dns_port = 16450 + index + 1
     clash_api_port = 6756 + index + 1
-    hiddify_settings = {
-        "log-level": "warn",
-        "enable-clash-api": True,
-        "clash-api-port": clash_api_port,
-        "region": "",
-        "block-ads": False,
-        "mixed-port": proxy_port,
-        "local-dns-port": dns_port,
-        "mtu": 9000,
-        "strict-route": True,
-        "tun-stack": "mixed",
-        "remote-dns-address": "1.1.1.1",
-        "direct-dns-address": "1.1.1.1",
-        "connection-test-url": "http://cp.cloudflare.com/",
-        "enable-tun": False,
-        "set-system-proxy": False,
-    }
-    hiddify_settings_path = TEMP_DIR / f"hiddify_settings_{index}.json"
-    hiddify_settings_path.write_text(json.dumps(hiddify_settings, ensure_ascii=False), encoding="utf-8")
+    runtime_log_path = run_dir / f"hiddify_runtime_{index}.log"
 
     def attempt_once() -> dict:
+        log_handle = open(runtime_log_path, "w", encoding="utf-8", errors="ignore")
         proc = subprocess.Popen(
             [
                 str(HIDDIFY_CLI),
                 "run",
                 "-c",
                 str(config_path),
-                "-d",
-                str(hiddify_settings_path),
+                "-D",
+                str(run_dir),
                 "--in-proxy-port",
                 str(proxy_port),
                 "--web-port",
@@ -1138,11 +1390,16 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
                 "1.1.1.1",
                 "--dns-remote",
                 "1.1.1.1",
+                "--fragment-size",
+                "2-4",
+                "--fragment-sleep",
+                "2-4",
                 "--log",
                 "warn",
             ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            cwd=str(run_dir),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
         )
         fail_base = {
             "config": candidate.raw,
@@ -1167,12 +1424,15 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
         }
         try:
             if not wait_for_port(proxy_port, effective_startup_wait + 2.0):
+                runtime_tail = read_tail_text(runtime_log_path)
+                if runtime_tail != "":
+                    _debug_log(f"RUNTIME #{index} {runtime_tail}")
                 _debug_log(f"FAIL #{index} port_not_ready on :{proxy_port}")
                 return {**fail_base, "reason": "port_not_ready", "fail_reason": "port_not_ready"}
-            _debug_log(f"PORT #{index} ready on :{proxy_port}, waiting 1.0s grace")
-            time.sleep(1.0)
+            _debug_log(f"PORT #{index} ready on :{proxy_port}, waiting 0.8s grace")
+            time.sleep(0.8)
             probe_timeout = min(effective_timeout, 2)
-            cloudflare_ok, cloudflare_ms = curl_url_ok(proxy_port, probe_timeout, "http://cp.cloudflare.com/")
+            cloudflare_ok, cloudflare_ms = sample_proxy_latency(proxy_port, probe_timeout, "http://cp.cloudflare.com/", attempts=2, pause_sec=0.15)
             _debug_log(f"CF #{index} ok={cloudflare_ok} ms={cloudflare_ms}")
             exit_ip, ipify_ms = curl_ip_timed(proxy_port, probe_timeout)
             _debug_log(f"IP #{index} exit_ip={exit_ip} ms={ipify_ms}")
@@ -1185,7 +1445,7 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
             ]
             real_latency_ms = min(successful_latencies) if successful_latencies else None
             quality_tier = classify_quality(candidate.quick_latency_ms, real_latency_ms)
-            passed = bool(exit_ip) and (cloudflare_ok or (candidate.quick_latency_ms or 9999) <= 180)
+            passed = bool(cloudflare_ok or exit_ip)
             recommended = passed and is_recommended_record(
                 {
                     "quick_latency_ms": candidate.quick_latency_ms,
@@ -1193,6 +1453,15 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
                 }
             )
             fail_reason = "" if passed else classify_fail_reason(cloudflare_ok, exit_ip, candidate.quick_latency_ms, candidate)
+            if not passed:
+                runtime_tail = read_tail_text(runtime_log_path)
+                if runtime_tail != "":
+                    _debug_log(f"RUNTIME #{index} {runtime_tail}")
+            stored_quick_ms = candidate.quick_latency_ms
+            if real_latency_ms is not None and stored_quick_ms is not None:
+                stored_quick_ms = min(int(stored_quick_ms), int(real_latency_ms))
+            elif real_latency_ms is not None:
+                stored_quick_ms = int(real_latency_ms)
             return {
                 "config": candidate.raw,
                 "protocol": candidate.protocol,
@@ -1202,9 +1471,9 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
                 "endpoint": f"{candidate.host}:{candidate.port}",
                 "family_key": family_key_from_candidate(candidate),
                 "exit_ip": exit_ip,
-                "quick_latency_ms": candidate.quick_latency_ms,
+                "quick_latency_ms": stored_quick_ms,
                 "real_latency_ms": real_latency_ms,
-                "effective_latency_ms": effective_latency_ms(candidate.quick_latency_ms, real_latency_ms),
+                "effective_latency_ms": effective_latency_ms(stored_quick_ms, real_latency_ms),
                 "quality_tier": quality_tier,
                 "recommended": recommended,
                 "score": candidate.score,
@@ -1225,6 +1494,7 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait(timeout=3)
+            log_handle.close()
 
     result = attempt_once()
     passed = result.get("passed", False)
@@ -1232,9 +1502,9 @@ def run_single_real_check(candidate: Candidate, index: int, timeout: int, startu
     _debug_log(f"RESULT #{index} lane={candidate.source_lane} passed={passed} reason={reason} fail_reason={result.get('fail_reason','')} latency={result.get('real_latency_ms')}")
     if not passed:
         quick_ms = candidate.quick_latency_ms or 9999
-        if quick_ms <= 220:
+        if quick_ms <= 260:
             _debug_log(f"RETRY #{index} (quick={quick_ms}ms)")
-            time.sleep(0.8)
+            time.sleep(0.6)
             retry = attempt_once()
             if retry.get("passed", False):
                 _debug_log(f"RETRY_OK #{index}")
@@ -1427,7 +1697,15 @@ def load_previous_latest() -> list[dict]:
             payload = json.loads(latest_path.read_text(encoding="utf-8"))
             data = payload.get("recommended_results", payload.get("displayed_results", payload.get("working", [])))
             if isinstance(data, list):
-                return [normalize_result_record(item) for item in data]
+                filtered: list[dict] = []
+                for item in data:
+                    record = normalize_result_record(item)
+                    if not bool(record.get("passed", False)):
+                        continue
+                    if str(record.get("verification_tier", "")) == "seed_unconfirmed":
+                        continue
+                    filtered.append(record)
+                return filtered
         except Exception:
             pass
     return []
@@ -1435,15 +1713,33 @@ def load_previous_latest() -> list[dict]:
 
 def annotate_result_countries(items: list[dict], geo_cache: dict) -> list[dict]:
     for item in items:
-        item["exit_country"] = lookup_exit_country_cached(str(item.get("exit_ip", "")), geo_cache)
+        exit_country = lookup_exit_country_cached(str(item.get("exit_ip", "")), geo_cache)
+        if exit_country == "Unknown":
+            fallback_region = str(item.get("region", item.get("source_region", "Unknown")))
+            if fallback_region != "" and fallback_region != "Unknown":
+                exit_country = fallback_region
+        item["exit_country"] = exit_country
         if item.get("source_region", "Unknown") == "Unknown" and item["exit_country"] != "Unknown":
             item["region"] = item["exit_country"]
     return items
 
 
-def mark_source(items: list[dict], source_kind: str) -> list[dict]:
+def mark_source(
+    items: list[dict],
+    source_kind: str,
+    source_lane: Optional[str] = None,
+    verification_tier: Optional[str] = None,
+) -> list[dict]:
     for item in items:
         item["source_kind"] = source_kind
+        if source_lane is not None:
+            item["source_lane"] = source_lane
+        else:
+            item["source_lane"] = str(item.get("source_lane", source_kind))
+        if verification_tier is not None:
+            item["verification_tier"] = verification_tier
+        elif "verification_tier" not in item:
+            item["verification_tier"] = "history_retained" if source_kind == "history" else "live_confirmed"
     return items
 
 
@@ -1454,6 +1750,7 @@ def enrich_with_history_retention(
     target_min_unique: int = 4,
     previous_items: list[dict] | None = None,
     blacklist: dict | None = None,
+    failed_endpoints: set[str] | None = None,
 ) -> list[dict]:
     if len(current_items) >= target_min_unique:
         return current_items
@@ -1461,17 +1758,25 @@ def enrich_with_history_retention(
     current_endpoints = {str(item.get("endpoint", "")) for item in current_items}
     current_exit_ips = {str(item.get("exit_ip", "")) for item in current_items}
     alive_endpoints = {f"{candidate.host}:{candidate.port}" for candidate in filtered_candidates}
-    allow_unconfirmed_history = len(current_items) == 0
+    blocked_failed = failed_endpoints or set()
     result = list(current_items)
 
     if previous_items:
         for item in previous_items:
             if blacklist and is_result_blocked(item, blacklist):
                 continue
+            if not bool(item.get("passed", False)):
+                continue
+            if str(item.get("verification_tier", "")) == "seed_unconfirmed":
+                continue
             if not bool(item.get("recommended", False)):
                 continue
             endpoint = str(item.get("endpoint", ""))
             exit_ip = str(item.get("exit_ip", ""))
+            if endpoint in blocked_failed:
+                continue
+            if endpoint not in alive_endpoints:
+                continue
             if endpoint in current_endpoints or exit_ip in current_exit_ips:
                 continue
             retained = dict(item)
@@ -1486,13 +1791,17 @@ def enrich_with_history_retention(
     for item in verified_history:
         if blacklist and is_result_blocked(item, blacklist):
             continue
+        if not bool(item.get("passed", False)):
+            continue
         if not bool(item.get("recommended", False)):
             continue
         endpoint = str(item.get("endpoint", ""))
         exit_ip = str(item.get("exit_ip", ""))
+        if endpoint in blocked_failed:
+            continue
         if endpoint in current_endpoints:
             continue
-        if endpoint not in alive_endpoints and not allow_unconfirmed_history:
+        if endpoint not in alive_endpoints:
             continue
         if exit_ip in current_exit_ips:
             continue
@@ -1583,6 +1892,46 @@ def process_real_batches(
     return all_records, all_working, checked_total
 
 
+def extract_visible_confirmed(results: list[dict], geo_cache: dict) -> list[dict]:
+    unique = dedupe_by_exit_ip(results)
+    unique = annotate_result_countries(unique, geo_cache)
+    return [dict(item) for item in unique if item.get("recommended", False)]
+
+
+def result_sort_key(item: dict) -> tuple:
+    tier_priority = {
+        "live_confirmed": 0,
+        "seed_confirmed": 1,
+        "history_retained": 2,
+        "seed_unconfirmed": 3,
+    }
+    return (
+        tier_priority.get(str(item.get("verification_tier", "")), 9),
+        int(item.get("effective_latency_ms", item.get("quick_latency_ms", 99999)) or 99999),
+        int(item.get("score", 0)) * -1,
+    )
+
+
+def dedupe_results_for_display(results: list[dict]) -> list[dict]:
+    ordered = sorted([dict(item) for item in results], key=result_sort_key)
+    seen_endpoints: set[str] = set()
+    seen_exit_ips: set[str] = set()
+    deduped: list[dict] = []
+    for item in ordered:
+        endpoint = str(item.get("endpoint", ""))
+        exit_ip = str(item.get("exit_ip", ""))
+        if endpoint != "" and endpoint in seen_endpoints:
+            continue
+        if exit_ip != "" and exit_ip in seen_exit_ips:
+            continue
+        deduped.append(item)
+        if endpoint != "":
+            seen_endpoints.add(endpoint)
+        if exit_ip != "":
+            seen_exit_ips.add(exit_ip)
+    return deduped
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--countries", default="")
@@ -1597,6 +1946,7 @@ def main() -> None:
         DEBUG_LOG_PATH.unlink(missing_ok=True)
     _debug_log("=== Pipeline started ===")
     started = time.strftime("%Y-%m-%d %H:%M:%S")
+    started_monotonic = time.perf_counter()
     include_countries = parse_country_list(args.countries)
     exclude_countries = parse_country_list(args.exclude_countries)
     user_blacklist = load_user_blacklist()
@@ -1606,215 +1956,278 @@ def main() -> None:
     geo_cache = load_geo_cache()
     now_ts = int(time.time())
 
-    downloaded = {"vless": 0, "trojan": 0, "vmess": 0, "ss": 0}
-    all_candidates: list[Candidate] = []
-    parsed_counts = {"vless": 0, "trojan": 0, "vmess": 0, "ss": 0}
+    downloaded = protocol_stat_bucket()
+    parsed_counts = protocol_stat_bucket()
+    quick_counts = protocol_stat_bucket()
+
+    def merge_bucket(target: dict[str, int], extra: dict[str, int]) -> None:
+        for protocol, count in extra.items():
+            target[protocol] = int(target.get(protocol, 0)) + int(count)
+
+    def prepare_candidates(candidates: list[Candidate]) -> tuple[list[Candidate], dict[str, int]]:
+        cleaned = dedupe_candidates(apply_user_blacklist(candidates, user_blacklist))
+        cleaned = apply_country_filters(cleaned, include_countries, exclude_countries)
+        cleaned = [candidate for candidate in cleaned if build_hiddify_outbound(candidate) is not None]
+        if not cleaned:
+            return [], protocol_stat_bucket()
+        filtered_candidates, quick_stats = asyncio.run(quick_filter(cleaned))
+        filtered_candidates = apply_cooldown(filtered_candidates, proxy_state, now_ts)
+        return filtered_candidates, quick_stats
+
     if args.mode != "quick_recovery":
-        write_pipeline_state(status="running", stage="download", progress=5, message="Downloading sources", started_at=started, mode=args.mode)
-        downloaded = download_sources()
-        all_candidates, parsed_counts = load_candidates()
+        write_pipeline_state(status="running", stage="download", progress=5, message="Downloading staged sources", started_at=started, mode=args.mode)
+        live_candidates_raw, live_downloaded, live_parsed = load_remote_candidates(build_primary_source_specs())
+        merge_bucket(downloaded, live_downloaded)
+        merge_bucket(parsed_counts, live_parsed)
     else:
         write_pipeline_state(status="running", stage="download", progress=5, message="Preparing quick recovery", started_at=started, mode=args.mode)
-    trusted_seed_candidates = load_seed_candidates(limit_per_file=12, paths=TRUSTED_SEED_FILES, source_lane="trusted_seed")
-    checked_seed_candidates = load_seed_candidates(limit_per_file=18, paths=CHECKED_SEED_FILES, source_lane="checked_seed")
-    checked_seed_candidates.extend(load_remote_seed_candidates(REMOTE_CHECKED_SEED_URLS, limit_per_url=40, source_lane="checked_seed"))
-    write_pipeline_state(status="running", stage="quick_filter", progress=20, message="Quick filtering", downloaded_lines=downloaded)
-    all_candidates = apply_user_blacklist(all_candidates, user_blacklist)
-    trusted_seed_candidates = apply_user_blacklist(trusted_seed_candidates, user_blacklist)
-    checked_seed_candidates = apply_user_blacklist(checked_seed_candidates, user_blacklist)
-    if args.mode != "quick_recovery":
-        filtered, quick_counts = asyncio.run(quick_filter(all_candidates))
-        for item in filtered:
-            item.source_lane = "live"
-    else:
-        filtered = []
-        quick_counts = {"vless": 0, "trojan": 0, "vmess": 0, "ss": 0}
-    trusted_seed_filtered, _ = asyncio.run(quick_filter(trusted_seed_candidates))
-    checked_seed_filtered, _ = asyncio.run(quick_filter(checked_seed_candidates))
-    if args.mode == "quick_recovery":
-        parsed_counts = {
-            "vless": len([c for c in trusted_seed_candidates + checked_seed_candidates if c.protocol == "vless"]),
-            "trojan": len([c for c in trusted_seed_candidates + checked_seed_candidates if c.protocol == "trojan"]),
-            "vmess": len([c for c in trusted_seed_candidates + checked_seed_candidates if c.protocol == "vmess"]),
-            "ss": len([c for c in trusted_seed_candidates + checked_seed_candidates if c.protocol == "ss"]),
-        }
-        quick_counts = {
-            "vless": len([c for c in trusted_seed_filtered + checked_seed_filtered if c.protocol == "vless"]),
-            "trojan": len([c for c in trusted_seed_filtered + checked_seed_filtered if c.protocol == "trojan"]),
-            "vmess": len([c for c in trusted_seed_filtered + checked_seed_filtered if c.protocol == "vmess"]),
-            "ss": len([c for c in trusted_seed_filtered + checked_seed_filtered if c.protocol == "ss"]),
-        }
-    filtered = apply_country_filters(filtered, include_countries, exclude_countries)
-    trusted_seed_filtered = apply_country_filters(trusted_seed_filtered, include_countries, exclude_countries)
-    checked_seed_filtered = apply_country_filters(checked_seed_filtered, include_countries, exclude_countries)
-    filtered_before_cooldown = list(filtered)
-    filtered = apply_cooldown(filtered, proxy_state, now_ts)
-    history_endpoints = {str(item.get("endpoint", "")) for item in verified_history}
-    history_candidates = [item for item in filtered_before_cooldown if f"{item.host}:{item.port}" in history_endpoints]
-    history_candidates.sort(key=lambda item: candidate_priority(item, proxy_state))
-    trojan_ws_pool = limit_family_candidates([item for item in filtered if item.protocol == "trojan" and item.network == "ws" and item.security == "tls"], 2)[:50]
-    trojan_other_pool = limit_family_candidates([item for item in filtered if item.protocol == "trojan" and item not in trojan_ws_pool], 2)[:25]
-    vless_pool = limit_family_candidates([item for item in filtered if item.protocol == "vless"], 2)[:40]
-    vmess_pool = limit_family_candidates([item for item in filtered if item.protocol == "vmess"], 2)[:35]
-    ss_pool = limit_family_candidates([item for item in filtered if item.protocol == "ss"], 2)[:25]
-    # Interleave protocols for diversity in real_pool (round-robin)
-    protocol_pools = [trojan_ws_pool, vless_pool, vmess_pool, ss_pool, trojan_other_pool]
-    interleaved: list[Candidate] = []
-    max_pool_len = max((len(p) for p in protocol_pools), default=0)
-    for idx in range(max_pool_len):
-        for pool in protocol_pools:
-            if idx < len(pool):
-                interleaved.append(pool[idx])
-    trusted_seed_by_proto: dict[str, list[Candidate]] = {}
-    checked_seed_by_proto: dict[str, list[Candidate]] = {}
-    for s in trusted_seed_filtered:
-        trusted_seed_by_proto.setdefault(s.protocol, []).append(s)
-    for s in checked_seed_filtered:
-        checked_seed_by_proto.setdefault(s.protocol, []).append(s)
-    limited_trusted_seeds: list[Candidate] = []
-    for proto in ("trojan", "vless", "vmess", "ss"):
-        limited_trusted_seeds.extend(trusted_seed_by_proto.get(proto, [])[:3])
-    limited_checked_seeds: list[Candidate] = []
-    for proto in ("trojan", "vless", "vmess", "ss"):
-        limited_checked_seeds.extend(checked_seed_by_proto.get(proto, [])[:2])
-    live_pool: list[Candidate] = []
-    seen_pool: set[str] = set()
-    for candidate in interleaved:
-        endpoint = f"{candidate.host}:{candidate.port}"
-        if endpoint in seen_pool:
-            continue
-        seen_pool.add(endpoint)
-        live_pool.append(candidate)
-    live_real_limit = 0 if args.mode == "quick_recovery" else min(int(args.real_limit), 12)
-    real_pool = live_pool[: live_real_limit]
-    seed_fallback_pool: list[Candidate] = []
-    seed_seen: set[str] = set()
-    for candidate in limited_trusted_seeds + limited_checked_seeds:
-        endpoint = f"{candidate.host}:{candidate.port}"
-        if endpoint in seed_seen:
-            continue
-        seed_seen.add(endpoint)
-        if endpoint in seen_pool:
-            continue
-        seed_fallback_pool.append(candidate)
+        live_candidates_raw = []
+
+    trusted_checked_raw, checked_downloaded, checked_parsed = load_remote_candidates(build_trusted_checked_source_specs())
+    trusted_local_raw, local_parsed = load_local_seed_candidates()
+    merge_bucket(downloaded, checked_downloaded)
+    merge_bucket(parsed_counts, checked_parsed)
+    merge_bucket(parsed_counts, local_parsed)
+
+    write_pipeline_state(status="running", stage="quick_filter", progress=20, message="Quick filtering staged pools", downloaded_lines=downloaded)
+
+    live_filtered, live_quick = prepare_candidates(live_candidates_raw)
+    trusted_checked_filtered, checked_quick = prepare_candidates(trusted_checked_raw)
+    trusted_local_filtered, local_quick = prepare_candidates(trusted_local_raw)
+    merge_bucket(quick_counts, live_quick)
+    merge_bucket(quick_counts, checked_quick)
+    merge_bucket(quick_counts, local_quick)
+
+    live_filtered = keep_release_protocols(live_filtered)
+    trusted_checked_filtered = keep_release_protocols(trusted_checked_filtered)
+    trusted_local_filtered = keep_release_protocols(trusted_local_filtered)
+
+    combined_filtered_candidates = dedupe_candidates(list(live_filtered) + list(trusted_checked_filtered) + list(trusted_local_filtered))
+    live_pool = build_protocol_balanced_pool(limit_family_candidates(live_filtered, 2), min(int(args.real_limit), 6), 3)
+    trusted_checked_pool = build_protocol_balanced_pool(limit_family_candidates(trusted_checked_filtered, 2), 32 if args.mode == "quick_recovery" else 32, 10 if args.mode == "quick_recovery" else 10)
+    trusted_local_pool = build_protocol_balanced_pool(limit_family_candidates(trusted_local_filtered, 2), 8, 3)
+
     _debug_log(
-        "POOL trusted_seed=%d checked_seed=%d live=%d real_pool=%d first=%s"
+        "POOL live=%d checked=%d local=%d first_live=%s"
         % (
-            len(limited_trusted_seeds),
-            len(limited_checked_seeds),
             len(live_pool),
-            len(real_pool),
-            ", ".join("%s:%s:%s" % (item.protocol, item.host, item.port) for item in real_pool[: min(8, len(real_pool))]),
+            len(trusted_checked_pool),
+            len(trusted_local_pool),
+            ", ".join("%s:%s:%s" % (item.protocol, item.host, item.port) for item in live_pool[: min(6, len(live_pool))]),
         )
     )
     write_pipeline_state(
         status="running",
         stage="planning",
         progress=35,
-        message="Prepared candidate pool",
-        candidate_pool=len(live_pool),
-        initial_real_pool=len(real_pool),
-        live_real_limit=live_real_limit,
+        message="Prepared staged candidate pools",
+        candidate_pool=len(combined_filtered_candidates),
+        initial_real_pool=len(live_pool),
     )
-    if args.mode == "quick_recovery":
-        target_min_unique = 3
-    elif args.real_limit <= 28:
-        target_min_unique = 2
-    else:
-        target_min_unique = 3
-    if real_pool:
-        live_records, live_working_all, checked_total = process_real_batches(
-            real_pool,
-            args,
-            initial_checked=0,
-            stage_label="real_check_stage_1",
-            stop_after_recommended=target_min_unique,
-        )
-    else:
-        live_records, live_working_all, checked_total = [], [], 0
-    all_records = list(live_records)
-    fresh_unique_all = dedupe_by_exit_ip(live_working_all)
-    fresh_unique_all = annotate_result_countries(fresh_unique_all, geo_cache)
-    fresh_results = [dict(item) for item in fresh_unique_all]
-    mark_source(fresh_results, "fresh")
-    recommended_fresh_results = [dict(item) for item in fresh_results if item.get("recommended", False)]
-    retained_results: list[dict] = []
-    if len(recommended_fresh_results) < target_min_unique and seed_fallback_pool:
+
+    cleanup_stale_hiddify_cli()
+
+    all_records: list[dict] = []
+    fresh_results: list[dict] = []
+    seed_confirmed_results: list[dict] = []
+    history_confirmed_results: list[dict] = []
+    retained_history_results: list[dict] = []
+    unconfirmed_seed_results: list[dict] = []
+    checked_total = 0
+    confirmed_visible: list[dict] = []
+
+    history_recheck_raw = load_history_recheck_candidates(previous_latest + verified_history)
+    history_recheck_filtered, history_recheck_quick = prepare_candidates(history_recheck_raw)
+    history_recheck_filtered = keep_release_protocols(history_recheck_filtered)
+    merge_bucket(quick_counts, history_recheck_quick)
+    history_recheck_pool = build_protocol_balanced_pool(limit_family_candidates(history_recheck_filtered, 1), 8, 4, ("trojan", "vless"))
+
+    if history_recheck_pool and runtime_remaining_seconds(started_monotonic, args.mode) > 20:
         write_pipeline_state(
             status="running",
-            stage="trusted_seed_fallback",
-            progress=72,
-            message="Trying trusted seed fallback",
+            stage="history_recheck",
+            progress=46,
+            message="Rechecking last confirmed proxies first",
             checked_total=checked_total,
-            fresh_recommended_total=len(recommended_fresh_results),
+            fresh_recommended_total=len(confirmed_visible),
         )
-        seed_extra_pool = seed_fallback_pool[: (max(6, target_min_unique * 4) if args.mode == "smart" else max(8, target_min_unique * 5))]
-        seed_records, seed_working, checked_total = process_real_batches(
-            seed_extra_pool,
+        history_records, history_working, checked_total = process_real_batches(
+            history_recheck_pool,
             args,
             initial_checked=checked_total,
-            stage_label="trusted_seed_fallback",
-            stop_after_recommended=target_min_unique,
+            stage_label="history_recheck",
+            stop_after_recommended=max(0, MINIMUM_USEFUL_TOTAL - len(confirmed_visible)),
         )
-        all_records.extend(seed_records)
-        seed_unique = dedupe_by_exit_ip(seed_working)
-        seed_unique = annotate_result_countries(seed_unique, geo_cache)
-        retained_results = [dict(item) for item in seed_unique if item.get("recommended", False)]
-        for item in retained_results:
-            item["retained_from_trusted_seed"] = True
-        mark_source(retained_results, "history")
+        all_records.extend(history_records)
+        stage_history = extract_visible_confirmed(history_working, geo_cache)
+        mark_source(stage_history, "history", source_lane="verified_history", verification_tier="history_retained")
+        history_confirmed_results.extend(stage_history)
+        confirmed_visible = [dict(item) for item in dedupe_by_exit_ip(confirmed_visible + stage_history)]
 
-    if len(recommended_fresh_results) + len(retained_results) < target_min_unique:
+    if len(confirmed_visible) < SOFT_TARGET_TOTAL and trusted_checked_pool and runtime_remaining_seconds(started_monotonic, args.mode) > 30:
         write_pipeline_state(
             status="running",
-            stage="history_fallback",
-            progress=88,
-            message="Trying final history fallback",
+            stage="trusted_checked",
+            progress=72,
+            message="Trying trusted checked pool",
             checked_total=checked_total,
-            fresh_recommended_total=len(recommended_fresh_results),
-            retained_total=len(retained_results),
+            fresh_recommended_total=len(confirmed_visible),
         )
-        retained_combined = enrich_with_history_retention(
-            list(recommended_fresh_results) + list(retained_results),
-            verified_history,
-            filtered,
-            previous_items=previous_latest,
-            blacklist=user_blacklist,
-            target_min_unique=target_min_unique,
+        checked_records, checked_working, checked_total = process_real_batches(
+            trusted_checked_pool,
+            args,
+            initial_checked=checked_total,
+            stage_label="trusted_checked",
+            stop_after_recommended=max(0, MINIMUM_USEFUL_TOTAL - len(confirmed_visible)),
         )
-        retained_results = [dict(item) for item in retained_combined if item.get("source_kind", "history") == "history" or item.get("retained_from_history") or item.get("retained_from_trusted_seed")]
-        mark_source(retained_results, "history")
-    if len(recommended_fresh_results) + len(retained_results) < target_min_unique:
+        all_records.extend(checked_records)
+        stage_checked = extract_visible_confirmed(checked_working, geo_cache)
+        mark_source(stage_checked, "history", verification_tier="seed_confirmed")
+        seed_confirmed_results.extend(stage_checked)
+        confirmed_visible = [dict(item) for item in dedupe_by_exit_ip(confirmed_visible + stage_checked)]
+
+    if live_pool and len(confirmed_visible) < MINIMUM_USEFUL_TOTAL:
+        live_records, live_working_all, checked_total = process_real_batches(
+            live_pool,
+            args,
+            initial_checked=checked_total,
+            stage_label="real_check_stage_1",
+            stop_after_recommended=max(0, LIVE_STAGE_STOP_TARGET - len(confirmed_visible)),
+        )
+        all_records.extend(live_records)
+        stage_fresh = extract_visible_confirmed(live_working_all, geo_cache)
+        mark_source(stage_fresh, "fresh", verification_tier="live_confirmed")
+        fresh_results.extend(stage_fresh)
+        confirmed_visible = [dict(item) for item in dedupe_by_exit_ip(confirmed_visible + stage_fresh)]
+
+    if len(confirmed_visible) < SOFT_TARGET_TOTAL and trusted_local_pool and runtime_remaining_seconds(started_monotonic, args.mode) > 30:
+        write_pipeline_state(
+            status="running",
+            stage="trusted_local_seed",
+            progress=78,
+            message="Trying trusted local seed pool",
+            checked_total=checked_total,
+            fresh_recommended_total=len(confirmed_visible),
+        )
+        local_records, local_working, checked_total = process_real_batches(
+            trusted_local_pool,
+            args,
+            initial_checked=checked_total,
+            stage_label="trusted_local_seed",
+            stop_after_recommended=max(0, MINIMUM_USEFUL_TOTAL - len(confirmed_visible)),
+        )
+        all_records.extend(local_records)
+        stage_local = extract_visible_confirmed(local_working, geo_cache)
+        mark_source(stage_local, "history", verification_tier="seed_confirmed")
+        seed_confirmed_results.extend(stage_local)
+        confirmed_visible = [dict(item) for item in dedupe_by_exit_ip(confirmed_visible + stage_local)]
+
+    noisy_filtered: list[Candidate] = []
+    if (
+        args.mode != "quick_recovery"
+        and len(confirmed_visible) < MINIMUM_USEFUL_TOTAL
+        and runtime_remaining_seconds(started_monotonic, args.mode) >= REMAINING_SECONDS_FOR_NOISY_STAGE
+    ) or (
+        args.mode != "quick_recovery"
+        and len(confirmed_visible) < SOFT_TARGET_TOTAL
+        and runtime_remaining_seconds(started_monotonic, args.mode) >= REMAINING_SECONDS_FOR_SOFT_EXPANSION
+    ):
+        write_pipeline_state(
+            status="running",
+            stage="noisy_expansion_download",
+            progress=82,
+            message="Expanding into noisy live pools",
+            checked_total=checked_total,
+            fresh_recommended_total=len(confirmed_visible),
+        )
+        noisy_candidates_raw, noisy_downloaded, noisy_parsed = load_remote_candidates(build_noisy_source_specs())
+        merge_bucket(downloaded, noisy_downloaded)
+        merge_bucket(parsed_counts, noisy_parsed)
+        noisy_filtered, noisy_quick = prepare_candidates(noisy_candidates_raw)
+        merge_bucket(quick_counts, noisy_quick)
+        combined_filtered_candidates = dedupe_candidates(combined_filtered_candidates + noisy_filtered)
+        noisy_pool = build_protocol_balanced_pool(limit_family_candidates(noisy_filtered, 2), 12, 4)
+        if noisy_pool:
+            noisy_records, noisy_working, checked_total = process_real_batches(
+                noisy_pool,
+                args,
+                initial_checked=checked_total,
+                stage_label="noisy_expansion",
+                stop_after_recommended=max(0, SOFT_TARGET_TOTAL - len(confirmed_visible)),
+            )
+            all_records.extend(noisy_records)
+            stage_noisy = extract_visible_confirmed(noisy_working, geo_cache)
+            mark_source(stage_noisy, "fresh", verification_tier="live_confirmed")
+            fresh_results.extend(stage_noisy)
+            confirmed_visible = [dict(item) for item in dedupe_by_exit_ip(confirmed_visible + stage_noisy)]
+
+    history_target = max(len(confirmed_visible), SOFT_TARGET_TOTAL)
+    failed_endpoints = {
+        str(item.get("endpoint", ""))
+        for item in all_records
+        if str(item.get("endpoint", "")) != "" and not bool(item.get("passed", False))
+    }
+    retained_combined = enrich_with_history_retention(
+        list(confirmed_visible),
+        verified_history,
+        combined_filtered_candidates,
+        target_min_unique=history_target,
+        previous_items=previous_latest,
+        blacklist=user_blacklist,
+        failed_endpoints=failed_endpoints,
+    )
+    confirmed_endpoints = {str(item.get("endpoint", "")) for item in confirmed_visible}
+    retained_history_results = [dict(item) for item in retained_combined if str(item.get("endpoint", "")) not in confirmed_endpoints]
+    mark_source(retained_history_results, "history", source_lane="verified_history", verification_tier="history_retained")
+
+    visible_with_history = list(confirmed_visible) + list(retained_history_results)
+    if args.mode == "quick_recovery" and len(visible_with_history) < SOFT_TARGET_TOTAL:
         write_pipeline_state(
             status="running",
             stage="trusted_seed_restore",
             progress=94,
-            message="Recovering trusted local seed entries",
+            message="Recovering unconfirmed trusted seeds",
             checked_total=checked_total,
-            fresh_recommended_total=len(recommended_fresh_results),
-            retained_total=len(retained_results),
+            fresh_recommended_total=len(fresh_results),
+            retained_total=len(retained_history_results),
         )
-        trusted_seed_restore = build_unconfirmed_seed_history(
-            trusted_seed_filtered,
-            list(retained_results),
-            target_min_unique,
+        restored = build_unconfirmed_seed_history(
+            trusted_local_filtered,
+            list(visible_with_history),
+            SOFT_TARGET_TOTAL,
             geo_cache,
         )
-        retained_results = [dict(item) for item in trusted_seed_restore if item.get("source_kind", "history") == "history"]
-        mark_source(retained_results, "history")
+        visible_endpoints = {str(item.get("endpoint", "")) for item in visible_with_history}
+        unconfirmed_seed_results = [
+            dict(item)
+            for item in restored
+            if str(item.get("endpoint", "")) not in visible_endpoints and bool(item.get("recommended", False))
+        ]
+        mark_source(unconfirmed_seed_results, "history", source_lane="seed_unconfirmed", verification_tier="seed_unconfirmed")
+
+    fresh_results = [dict(item) for item in dedupe_by_exit_ip(fresh_results)]
+    seed_confirmed_results = [dict(item) for item in dedupe_by_exit_ip(seed_confirmed_results)]
+    history_confirmed_results = [dict(item) for item in dedupe_by_exit_ip(history_confirmed_results)]
+    retained_results = dedupe_results_for_display(list(seed_confirmed_results) + list(history_confirmed_results) + list(retained_history_results) + list(unconfirmed_seed_results))
+    recommended_results = [
+        dict(item)
+        for item in list(fresh_results) + list(seed_confirmed_results) + list(history_confirmed_results)
+        if bool(item.get("recommended", False))
+    ]
+    recommended_results = dedupe_results_for_display(recommended_results)
+    displayed_results = annotate_result_countries(list(recommended_results), geo_cache)
+    displayed_results = dedupe_results_for_display(displayed_results)
+
     proxy_state = update_proxy_state(proxy_state, all_records)
     save_proxy_state(proxy_state)
-    recommended_results = list(recommended_fresh_results) + list(retained_results)
-    displayed_results = list(recommended_results)
-    displayed_results = annotate_result_countries(displayed_results, geo_cache)
-    displayed_results.sort(key=lambda item: (item.get("effective_latency_ms", item.get("quick_latency_ms", 99999)), item.get("real_latency_ms", 99999)))
     save_geo_cache(geo_cache)
-    save_verified_history(merge_verified_history(verified_history, recommended_fresh_results))
+    save_verified_history(merge_verified_history(verified_history, fresh_results + seed_confirmed_results))
 
     fresh_passing_total = len(fresh_results)
-    fresh_recommended_total = len(recommended_fresh_results)
+    fresh_recommended_total = len(fresh_results)
     retained_total = len(retained_results)
     recommended_visible_total = len(displayed_results)
+    runtime_seconds = int(time.perf_counter() - started_monotonic)
     all_passing_results = [dict(item) for item in dedupe_by_exit_ip([record for record in all_records if record.get("passed", False)])]
     all_passing_results = annotate_result_countries(all_passing_results, geo_cache)
     slow_hidden_total = len([item for item in all_passing_results if not item.get("recommended", False)])
@@ -1829,7 +2242,7 @@ def main() -> None:
         "meta": {
             "project": "Anfisa VPN",
             "started_at": started,
-            "source_repo": "kort0881/vpn-vless-configs-russia",
+            "source_repo": "staged-mixed-pools",
             "mode": args.mode,
             "countries_filter": include_countries,
             "exclude_countries": exclude_countries,
@@ -1844,6 +2257,10 @@ def main() -> None:
             "fresh_passing_total": fresh_passing_total,
             "fresh_working_total": fresh_passing_total,
             "fresh_recommended_total": fresh_recommended_total,
+            "fresh_live_total": fresh_recommended_total,
+            "seed_confirmed_total": len(seed_confirmed_results),
+            "history_total": len(history_confirmed_results) + len(retained_history_results),
+            "unconfirmed_seed_total": len(unconfirmed_seed_results),
             "slow_hidden_total": slow_hidden_total,
             "fresh_slow_total": slow_hidden_total,
             "retained_total": retained_total,
@@ -1851,8 +2268,10 @@ def main() -> None:
             "visible_total": recommended_visible_total,
             "working_total": recommended_visible_total,
             "working_unique_exit_ip": len({str(item.get("exit_ip", "")) for item in displayed_results if str(item.get("exit_ip", "")) != ""}),
-            "retained_from_history": retained_total,
-            "recommended_count": fresh_recommended_total,
+            "retained_from_history": len(history_confirmed_results) + len(retained_history_results),
+            "recommended_count": recommended_visible_total,
+            "target_visible_total": SOFT_TARGET_TOTAL,
+            "runtime_seconds": runtime_seconds,
             "fail_reason_counts": fail_reason_counts,
         },
         "fresh_results": fresh_results,
@@ -1861,7 +2280,7 @@ def main() -> None:
         "all_passing_results": all_passing_results,
         "displayed_results": displayed_results,
         "working": displayed_results,
-        "top_candidates": [asdict(item) for item in filtered[:18]],
+        "top_candidates": [asdict(item) for item in combined_filtered_candidates[:18]],
     }
 
     latest_path = RESULTS_DIR / "latest.json"
@@ -1875,9 +2294,14 @@ def main() -> None:
         fresh_passing_total=fresh_passing_total,
         fresh_working_total=fresh_passing_total,
         fresh_recommended_total=fresh_recommended_total,
+        fresh_live_total=fresh_recommended_total,
+        seed_confirmed_total=len(seed_confirmed_results),
+        history_total=len(history_confirmed_results) + len(retained_history_results),
+        unconfirmed_seed_total=len(unconfirmed_seed_results),
         retained_total=retained_total,
         recommended_visible_total=recommended_visible_total,
         visible_total=recommended_visible_total,
+        runtime_seconds=runtime_seconds,
         slow_hidden=slow_hidden_total,
     )
     print(json.dumps(output, ensure_ascii=True))
